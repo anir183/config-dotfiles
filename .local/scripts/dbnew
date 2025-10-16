@@ -1,0 +1,180 @@
+#!/bin/bash
+
+# get or generate container name
+dboxname="$1"
+if [ "$#" -ne 1 ]; then
+    read -p "No name provided. Use random? y/n: " yesno
+    case $yesno in
+        [Yy]* )
+	    dboxname="cont-$(cat /dev/urandom | tr -cd 'a-z0-9' | head -c 5)"
+	    echo "Using name '$dboxname'"
+	;;
+	* ) 
+	    echo "Exiting"
+	    exit 1
+	;;
+    esac
+# check if the input is all lowercase, contains no spaces, and contains only valid characters (a-z, 0-9, hyphen)
+elif [[ ! "$dboxname" =~ ^[a-z0-9-]+$ || "$container_name" =~ [[:space:]] ]]; then
+    echo "Invalid input. Expected format: 'a-z, 0-9, -'"
+    exit 1
+fi
+
+# declare vars
+dboximage="archlinux"
+dboxhome="$HOME/dev/_envs/$dboxname"
+dboxhost="$dboxname-dbox-183"
+
+# distrobox command
+if [ $dboximage == "archlinux" ]; then
+    distrobox create --name $dboxname --image $dboximage --home $dboxhome --hostname $dboxhost --additional-packages "nvim zellij bat eza git lazygit fd fzf ripgrep yazi github-cli gcc 7zip make debugedit fakeroot openssl pkg-config"
+else
+    distrobox create --name $dboxname --image $dboximage --home $dboxhome --hostname $dboxhost --additional-packages "nvim zellij git fzf ripgrep gcc 7zip make"
+fi
+
+# enter for inital installation
+echo "Inital setup."
+while distrobox enter $dboxname -- echo "Intial setup completed!"; [[ $? -ne 0 ]];
+do
+    read -p "Unsuccessful inital insallation attempt. Retry? y/n: " yesno
+    case $yesno in
+        [Nn]* )
+            echo "Continuing without initial installation"
+	    break
+	;;
+	* ) 
+            echo "Retrying!"
+	    echo ""
+	;;
+    esac
+    sleep 1
+done
+distrobox enter $dboxname -- bat cache --build
+echo ""
+
+# remove bash files from dbox home
+__tot_files_remv=5
+__curr_file_remv=0
+__org_profile=$(cat $dboxhome/.profile 2>/dev/null || echo "")
+__org_bashrc=$(cat $dboxhome/.bashrc 2>/dev/null || echo "")
+__org_bashhist=$(cat $dboxhome/.bash_history 2>/dev/null || echo "")
+__org_bashlogout=$(cat $dboxhome/.bash_logout 2>/dev/null || echo "")
+__org_bashprofile=$(cat $dboxhome/.bash_profile 2>/dev/null || echo "")
+echo "$((_curr_file_remv+=1))/$__tot_files_remv Removing existing .profile" && rm $dboxhome/.profile
+echo "$((_curr_file_remv+=1))/$__tot_files_remv Removing existing .bashrc" && rm $dboxhome/.bashrc
+echo "$((_curr_file_remv+=1))/$__tot_files_remv Removing existing .bash_history" && rm $dboxhome/.bash_history
+echo "$((_curr_file_remv+=1))/$__tot_files_remv Removing existing .bash_profile" && rm $dboxhome/.bash_profile
+echo "$((_curr_file_remv+=1))/$__tot_files_remv Removing existing .bash_logout" && rm $dboxhome/.bash_logout
+echo ""
+
+# create folder
+echo "Creating .config directory" && mkdir $dboxhome/.config
+echo "Creating .local directory" && mkdir $dboxhome/.local
+echo "Creating subdirectories for .local" && mkdir $dboxhome/.local/{state,share,bin,mksrc,scripts,state/bash}
+__bash_hist=0
+(echo "Creating bash history file" && touch $dboxhome/.local/state/bash/history) || echo "Could not create bash history file" && __bash_hist=1
+echo ""
+
+# copy config files from root
+__tot_copy=5
+__curr_copying=0
+__succs_copied=0
+# WARN: using cp sometimes creates symlinks
+echo "$((_curr_copying+=1))/$__tot_copy Copying .profile file from root" && cat $HOME/.profile 2>/dev/null > $dboxhome/.profile && ((__succs_copied+=1))
+echo "$((_curr_copying+=1))/$__tot_copy Copying .bashrc file from root" && cat $HOME/.bashrc 2>/dev/null > $dboxhome/.bashrc && ((__succs_copied+=1))
+echo "echo \"Entered \$CONTAINER_ID in \$(pwd)\"" >> $dboxhome/.bashrc
+echo "$((_curr_copying+=1))/$__tot_copy Copying .bash_profile file from root" && cat $HOME/.bash_profile 2>/dev/null > $dboxhome/.bash_profile && ((__succs_copied+=1))
+echo "$((_curr_copying+=1))/$__tot_copy Copying .bash_logout file from root" && cat $HOME/.bash_logout 2>/dev/null > $dboxhome/.bash_logout && ((__succs_copied+=1))
+echo "$((_curr_copying+=1))/$__tot_copy Copying .config/bash/ directory from root" && cp -R $HOME/.config/bash $dboxhome/.config/bash && ((__succs_copied+=1))
+echo "Copied $__succs_copied/$__tot_copy files or directories from root. Failed $((__tot_copy - __succs_copied))"
+echo ""
+
+# link config files from root
+__tot_link=8
+__curr_linking=0
+__succs_linked=0
+echo "$((__curr_linking+=1))/$__tot_link Linking .config/bat/ directory from root" && ln -s $HOME/.config/bat $dboxhome/.config/bat && ((__succs_linked+=1))
+echo "$((__curr_linking+=1))/$__tot_link Linking .config/environment.d/ directory from root" && ln -s $HOME/.config/environment.d $dboxhome/.config/environment.d && ((__succs_linked+=1))
+echo "$((__curr_linking+=1))/$__tot_link Linking .config/eza/ directory from root" && ln -s $HOME/.config/eza $dboxhome/.config/eza && ((__succs_linked+=1))
+echo "$((__curr_linking+=1))/$__tot_link Linking .config/git/ directory from root" && ln -s $HOME/.config/git $dboxhome/.config/git && ((__succs_linked+=1))
+echo "$((__curr_linking+=1))/$__tot_link Linking .config/gh/ directory from root" && ln -s $HOME/.config/gh $dboxhome/.config/gh && ((__succs_linked+=1))
+echo "$((__curr_linking+=1))/$__tot_link Linking .config/nvim/ directory from root" && ln -s $HOME/.config/nvim $dboxhome/.config/nvim && ((__succs_linked+=1))
+echo "$((__curr_linking+=1))/$__tot_link Linking .config/yazi/ directory from root" && ln -s $HOME/.config/yazi $dboxhome/.config/yazi && ((__succs_linked+=1))
+echo "$((__curr_linking+=1))/$__tot_link Linking .config/zellij/ directory from root" && ln -s $HOME/.config/zellij $dboxhome/.config/zellij && ((__succs_linked+=1))
+echo "Linked $__succs_linked/$__tot_link files or directories from root. Failed $((__tot_link - __succs_linked))"
+echo ""
+
+# offer file cleanup in case of failures
+if [[ $__tot_copy != $__succs_copied ]] || [[ $__tot_link != $__succs_linked ]]; then
+    read -p "Some file functions failed. Clean files? y/n: " yesno
+    case $yesno in
+        [Yy]* )
+            rm -f $dboxhome/.profile
+            rm -f $dboxhome/.bashrc
+            rm -f $dboxhome/.bash_profile
+            rm -f $dboxhome/.bash_logout
+            rm -f $dboxhome/.bash_history
+            echo $__org_profile > $dboxhome/.profile
+            echo $__org_bashrc > $dboxhome/.bashrc
+            echo $__org_bashhist > $dboxhome/.bash_profile
+            echo $__org_bashlogout > $dboxhome/.bash_logout
+            echo $__org_bashprofile > $dboxhome/.bash_history
+
+	    rm -rf $dboxhome/.config
+	    rm -rf $dboxhome/.local
+            
+	    echo "Cleaned up transferred files and restored removed."
+	;;
+	* ) 
+	    echo "Keeping files and continuing!"
+	;;
+    esac
+    echo ""
+fi
+
+# paru setup for arch
+if [ $dboximage == "archlinux" ]; then
+    distrobox enter $dboxname -- echo -e "[multilib]\nInclude = /etc/pacman.d/mirrorlist" | sudo tee -a /etc/pacman.conf
+    distrobox enter $dboxname -- sudo pacman -Syu
+
+    read -p "Try installing paru? y/n: " yesno
+    case $yesno in
+        [Yy]* )
+            echo "Generating paru install script."
+            echo "git clone https://aur.archlinux.org/paru.git $dboxhome/.local/mksrc/paru" > $dboxhome/.local/scripts/install-paru.sh
+            echo "cd $dboxhome/.local/mksrc/paru && makepkg -si" >> $dboxhome/.local/scripts/install-paru.sh
+            echo ""
+	    echo "Making install script executable via chmod"
+            echo ""
+	    distrobox enter $dboxname -- chmod +x $dboxhome/.local/scripts/install-paru.sh
+            echo ""
+	    echo "Starting script"
+            echo ""
+	    distrobox enter $dboxname -- sh $dboxhome/.local/scripts/install-paru.sh
+            echo ""
+            echo "Completed post setup. Paru installation script at $dboxhome/.local/scripts/install-paru.sh. Run if install failed."
+            echo ""
+	;;
+	* ) 
+	    echo "Skipping paru install"
+            read -p "Generate paru install script? y/n: " yesno
+            case $yesno in
+                [Yy]* )
+                    echo "Generating paru install script."
+                    echo "git clone https://aur.archlinux.org/paru.git $dboxhome/.local/mksrc/paru" > $dboxhome/.local/scripts/install-paru.sh
+                    echo "cd $dboxhome/.local/mksrc/paru && makepkg -si" >> $dboxhome/.local/scripts/install-paru.sh
+                    echo ""
+	            echo "Making install script executable via chmod"
+                    echo ""
+	            distrobox enter $dboxname -- chmod +x $dboxhome/.local/scripts/install-paru.sh
+                    echo ""
+	        ;;
+	        * ) 
+	            echo "Skipping paru install"
+	        ;;
+            esac
+	;;
+    esac
+fi
+
+echo "Finished. Container ready for running!"

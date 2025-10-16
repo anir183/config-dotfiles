@@ -1,0 +1,1 @@
+/home/anir183/.config/environment.d

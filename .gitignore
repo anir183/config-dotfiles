@@ -10,20 +10,33 @@
 !.config/
 .config/*
 !.config/bash/
+!.config/bash/*
 !.config/bat/
+!.config/bat/*
 !.config/environment.d/
+!.config/environment.d/*
 !.config/eza/
+!.config/eza/*
 !.config/gh/
+!.config/gh/*
 !.config/ghostty/
+!.config/ghostty/*
 !.config/git/
+!.config/git/*
 !.config/niri/
+!.config/niri/*
 !.config/swaylock/
+!.config/swaylock/*
 !.config/yazi/
+!.config/yazi/*
 !.config/zellij/
+!.config/zellij/*
 !.config/pavucontrol/
+!.config/pavucontrol/*
 !.config/user-dirs.dirs
 
 # scripts
 !.local/
 .local/*
-!.local/script
+!.local/scripts/
+!.local/scripts/*
