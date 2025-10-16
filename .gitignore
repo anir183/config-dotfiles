@@ -2,3 +2,28 @@
 *
 
 # un-ignore necessary files
+
+# config files
+!.bashrc
+!.bashrc_profile
+!.profile
+!.config/
+.config/*
+!.config/bash/
+!.config/bat/
+!.config/environment.d/
+!.config/eza/
+!.config/gh/
+!.config/ghostty/
+!.config/git/
+!.config/niri/
+!.config/swaylock/
+!.config/yazi/
+!.config/zellij/
+!.config/pavucontrol/
+!.config/user-dirs.dirs
+
+# scripts
+!.local/
+.local/*
+!.local/script
